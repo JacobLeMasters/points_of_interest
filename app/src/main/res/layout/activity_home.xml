@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="16dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="16dp"
+    android:orientation="vertical"
+    tools:context="com.example.jacob.pointsofinterest.HomeActivity">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Welcome to Points of Interest!"
+        android:id="@+id/title"
+        android:background="#ffffff"
+        android:editable="false"
+        android:enabled="false"
+        android:textAlignment="center"
+        android:textSize="25dp"
+        android:textColor="#000000" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter a city to search"
+        android:id="@+id/prompt"
+        android:layout_gravity="center_horizontal"
+        android:textColor="#ff0000"
+        android:paddingTop="20dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Seattle, Wa"
+        android:id="@+id/search_input"
+        android:layout_gravity="center_horizontal"
+        android:editable="false"
+        android:textColor="#000000"
+        android:background="#bcb9b9"
+        android:textSize="25dp" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search"
+        android:id="@+id/search_button"
+        android:layout_gravity="center_horizontal"
+        android:onClick="startMapsActivity" />
+</LinearLayout>
