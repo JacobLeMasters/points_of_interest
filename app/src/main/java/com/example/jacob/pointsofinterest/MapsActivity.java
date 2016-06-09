@@ -1,30 +1,47 @@
 package com.example.jacob.pointsofinterest;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
+import android.support.v4.content.ContextCompat;
+
+import com.google.android.gms.common.ConnectionResult;
+
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private GoogleMap mMap;
     String message;
+    private GoogleApiClient mGoogleApiClient;
+    private Location mLastLocation;
+    private Location cLocation;
+    LatLng cLatLng;
+    LatLng mLatLng;
+    Marker cMarker;
+    Context mContext;
 
     //markers
     LatLng lwit;
@@ -51,10 +68,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         Intent intent = getIntent();
         message = intent.getStringExtra("cameraStart");
+        mContext = getApplicationContext();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        // Create an instance of GoogleAPIClient.
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+
+    }
+
+
+    protected void onStart() {
+        mGoogleApiClient.connect();
+        super.onStart();
+    }
+
+    protected void onStop() {
+        mGoogleApiClient.disconnect();
+        super.onStop();
     }
 
 
@@ -80,34 +119,74 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startingCamera, 16));
 
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mMap.setMyLocationEnabled(true);
+        } else {
+            // Show rationale and request permission.
+        }
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                cMarker = marker;
+                cLatLng = marker.getPosition();
+                cLocation = new Location(LocationManager.GPS_PROVIDER);
+                cLocation.setLatitude(cLatLng.latitude);
+                cLocation.setLongitude(cLatLng.longitude);
+            }
+        });
+        googleMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener(){
+            @Override
+        public boolean onMyLocationButtonClick() {
+                if (cLocation != null && mLastLocation != null && cMarker != null) {
+                    if (mLastLocation.distanceTo(cLocation) < 500) {
+
+                        SharedPreferences myPrefs = mContext.getSharedPreferences(cMarker.getTitle(), Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = myPrefs.edit();
+                        editor.putBoolean("visited", true);
+                        editor.apply();
+                        fillMarkers();
+                    }
+                }
+                    return false;
+                }
+
+        });
     }
 
-    void fillMarkers(){
+    void fillMarkers() {
 
         try {
+            mMap.clear();
             InputStream in = this.getResources().openRawResource(R.raw.points_of_interest);
-            if (in != null){
+            if (in != null) {
                 InputStreamReader tmp = new InputStreamReader(in);
                 BufferedReader reader = new BufferedReader(tmp);
                 String str;
                 double latitude;
                 double longitude;
-                while (reader.readLine() != null){
+                while (reader.readLine() != null) {
                     str = reader.readLine();
                     latitude = Double.parseDouble(reader.readLine());
                     longitude = Double.parseDouble(reader.readLine());
                     LatLng latLng = new LatLng(latitude, longitude);
                     SharedPreferences myPrefs = this.getSharedPreferences(str, Context.MODE_PRIVATE);
                     Boolean visited = myPrefs.getBoolean("visited", false);
-                    if(visited)
-                        mMap.addMarker(new MarkerOptions().position(latLng).title(str).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                    if (visited)
+                        mMap.addMarker(new MarkerOptions().position(latLng).title(str).snippet("Click InfoWindow then MyLocation to CheckIn").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
                     else
-                        mMap.addMarker(new MarkerOptions().position(latLng).title(str).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
+                        mMap.addMarker(new MarkerOptions().position(latLng).title(str).snippet("Visited").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                }
+                if (mLatLng != null) {
+                    SharedPreferences myPrefs = this.getSharedPreferences("My Location", Context.MODE_PRIVATE);
+                    Boolean visited = myPrefs.getBoolean("visited", false);
+                    if (visited)
+                        mMap.addMarker(new MarkerOptions().position(mLatLng).title("My Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                    else
+                        mMap.addMarker(new MarkerOptions().position(mLatLng).title("My Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
                 }
             }
-        }
-
-        catch (Throwable t) {
+        } catch (Throwable t) {
 
             Toast
 
@@ -169,4 +248,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.addMarker(new MarkerOptions().position(fifthAvenueTheatre).title("5th Avenue Theatre"));*/
     }
 
+    @Override
+    public void onConnected(Bundle bundle) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                mGoogleApiClient);
+        if (mLastLocation != null) {
+            mLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                SharedPreferences myPrefs = this.getSharedPreferences("My Location", Context.MODE_PRIVATE);
+                Boolean visited = myPrefs.getBoolean("visited", false);
+                if (visited)
+                    mMap.addMarker(new MarkerOptions().position(mLatLng).title("My Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                else
+                    mMap.addMarker(new MarkerOptions().position(mLatLng).title("My Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
 }
+
+

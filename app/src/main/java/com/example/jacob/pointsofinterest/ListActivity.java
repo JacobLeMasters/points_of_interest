@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -82,10 +83,11 @@ public class ListActivity extends AppCompatActivity {
     {
         SharedPreferences myPrefs2 = this.getSharedPreferences(button.getText().toString(), Context.MODE_PRIVATE);
         Boolean visited = myPrefs2.getBoolean("visited", false);
-        if(visited)
-            button.setBackgroundColor(Color.GREEN);
+        if(!visited)
+            button.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
         else
-            button.setBackgroundColor(Color.RED);
+            button.getBackground().setColorFilter(0xFF00FF00, PorterDuff.Mode.MULTIPLY);
+        button.invalidate();
     }
 
     public void startMapsActivity(Button button)

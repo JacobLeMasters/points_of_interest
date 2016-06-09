@@ -48,6 +48,7 @@ public class HomeActivity extends AppCompatActivity {
                     reader.readLine();
                     this.getSharedPreferences(str, 0).edit().clear().apply();
                 }
+                this.getSharedPreferences("My Location", 0).edit().clear().apply();
             }
         }
 
